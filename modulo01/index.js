@@ -37,9 +37,11 @@ function checkUserExists(req,res,next){
   return next();
 }
 function checkUserInArray(req,res,next){
-  if(!users[req.params.index]){
+  const user = users[req.params.index];
+  if(!user){
     return res.status(400).json({error:"User does not exists"});
   }
+  req.user=user;
   return next();
 }
 
@@ -51,6 +53,8 @@ server.get("/users/:index",checkUserInArray, (req, res) => {//Middleware
   const { index } = req.params;
   //return res.json({ message: `Buscando o usuário ${index}` });
   return res.json(users[index]);
+  //ou
+  //return res.json(req.user);// pois foi inserido no Middleware local checkUserInArray
 });
 
 // Request body (POST/PUT) = {"name":"Gustavo","email":"gustavomdcl@gmail.com"}
