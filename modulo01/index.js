@@ -29,9 +29,22 @@ server.use((req,res,next)=>{
   console.log('Depois do código');
   console.timeEnd('Request');
 });
+//Middleware local
+function checkUserExists(req,res,next){
+  if(!req.body.name){
+    return res.status(400).json({error:'User name is required'});
+  }
+  return next();
+}
+function checkUserInArray(req,res,next){
+  if(!users[req.params.index]){
+    return res.status(400).json({error:"User does not exists"});
+  }
+  return next();
+}
 
 // Route params = /users/1
-server.get("/users/:index", (req, res) => {//Middleware
+server.get("/users/:index",checkUserInArray, (req, res) => {//Middleware
   /* http://localhost:3000/users/1 */
   //const index = req.params.index;
   //ou
@@ -45,18 +58,18 @@ server.get("/users/:index", (req, res) => {//Middleware
 server.get('/users',(req,res)=>{//Middleware
   return res.json(users);
 });
-server.post('/users',(req,res)=>{//Middleware
+server.post('/users',checkUserExists,(req,res)=>{//Middleware
   const {name} = req.body;
   users.push(name);
   return res.json(users);
 });
-server.put("/users/:index", (req, res) => {//Middleware
+server.put("/users/:index",checkUserInArray,checkUserExists, (req, res) => {//Middleware
   const { index } = req.params;
   const { name } = req.body;
   users[index] = name;
   return res.json(users);
 });
-server.delete("/users/:index", (req, res) => {//Middleware
+server.delete("/users/:index",checkUserInArray, (req, res) => {//Middleware
   const { index } = req.params;
   users.splice(index,1);
   return res.json(users);
