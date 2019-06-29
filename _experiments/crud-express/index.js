@@ -12,6 +12,7 @@ const database = {
       "title-plural": "Projetos",
       gender: "o"
     },
+    relation: false,
     body: {
       name: {
         type: "text",
@@ -36,7 +37,14 @@ const database = {
       "title-plural": "Tarefas",
       gender: "a"
     },
+    relation: "project",
     body: {
+      // project: {
+      //   type: "relation",
+      //   required: true,
+      //   label: "Projeto",
+      //   placeholder: "Escolha o projeto para essa tarefa"
+      // },
       name: {
         type: "text",
         required: true,
@@ -70,9 +78,14 @@ class App {
   }
   Pages() {
     for (const cpt in this.init) {
+      var RelationHeader = "";
+      var { relation } = this.init[cpt];
+      if (this.init[cpt]["relation"] != false) {
+        RelationHeader = `${this.init[cpt]["relation"]}/:parent/`;
+      }
       //CREATE
       server.post(
-        `/${this.init[cpt]["details"]["slug-singular"]}`,
+        `/${RelationHeader}${this.init[cpt]["details"]["slug-singular"]}`,
         (req, res) => {
           const post = {};
           for (const field in this.init[cpt]["body"]) {
@@ -86,20 +99,36 @@ class App {
               post[field] = req.body[field];
             }
           }
+          var parent = "";
+          if (relation != "") {
+            parent = req.params.parent;
+            post[relation] = parent;
+          }
           this.Add(cpt, post);
-          return res.json(this.List(cpt));
+          return res.json(this.List(cpt, parent, relation));
         }
       );
       //LIST
-      server.get(`/${this.init[cpt]["details"]["slug-plural"]}`, (req, res) => {
-        return res.json(this.List(cpt));
-      });
+      server.get(
+        `/${RelationHeader}${this.init[cpt]["details"]["slug-plural"]}`,
+        (req, res) => {
+          var parent = "";
+          if (relation != "") {
+            parent = req.params.parent;
+          }
+          return res.json(this.List(cpt, parent, relation));
+        }
+      );
       //VIEW
       server.get(
-        `/${this.init[cpt]["details"]["slug-singular"]}/:id`,
+        `/${RelationHeader}${this.init[cpt]["details"]["slug-singular"]}/:id`,
         (req, res) => {
           const { id } = req.params;
-          const post = this.View(cpt, id);
+          var parent = "";
+          if (relation != "") {
+            parent = req.params.parent;
+          }
+          const post = this.View(cpt, id, parent, relation);
           if (!post) {
             return res.status(400).json({
               error: `${
@@ -112,10 +141,14 @@ class App {
       );
       //UPDATE
       server.put(
-        `/${this.init[cpt]["details"]["slug-singular"]}/:id`,
+        `/${RelationHeader}${this.init[cpt]["details"]["slug-singular"]}/:id`,
         (req, res) => {
           const { id } = req.params;
-          const postExists = this.View(cpt, id);
+          var parent = "";
+          if (relation != "") {
+            parent = req.params.parent;
+          }
+          const postExists = this.View(cpt, id, parent, relation);
           if (!postExists) {
             return res.status(400).json({
               error: `${
@@ -135,16 +168,23 @@ class App {
               post[field] = req.body[field];
             }
           }
+          if (relation != "") {
+            post[relation] = parent;
+          }
           this.Update(req, res, cpt, id, post);
-          return res.json(this.List(cpt));
+          return res.json(this.List(cpt, parent, relation));
         }
       );
       //DELETE
       server.delete(
-        `/${this.init[cpt]["details"]["slug-singular"]}/:id`,
+        `/${RelationHeader}${this.init[cpt]["details"]["slug-singular"]}/:id`,
         (req, res) => {
           const { id } = req.params;
-          const post = this.View(cpt, id);
+          var parent = "";
+          if (relation != "") {
+            parent = req.params.parent;
+          }
+          const post = this.View(cpt, id, parent, relation);
           if (!post) {
             return res.status(400).json({
               error: `${
@@ -153,29 +193,41 @@ class App {
             });
           }
           this.Delete(req, res, cpt, id);
-          return res.json(this.List(cpt));
+          return res.json(this.List(cpt, parent, relation));
         }
       );
     }
   }
-  Add(cpt, data) {
+  Add(cpt, data, parent) {
     //DATABASE
     data["id"] = this[`${cpt}AI`];
     this[`${cpt}AI`]++;
     //DATABASE
     this[cpt].push(data);
   }
-  List(cpt) {
-    if (this[cpt].length == 0) {
+  List(cpt, parent, relation) {
+    var list = this[cpt];
+    if (parent != "") {
+      list = this[cpt].filter(function(item) {
+        return item[relation] == parent;
+      });
+    }
+    if (list.length == 0) {
       return {
         error: `No ${this.init[cpt]["details"]["title-singular"]} created`
       };
     } else {
-      return this[cpt];
+      return list;
     }
   }
-  View(cpt, id) {
-    return this[cpt].find(function(item) {
+  View(cpt, id, parent, relation) {
+    var list = this[cpt];
+    if (parent != "") {
+      list = this[cpt].filter(function(item) {
+        return item[relation] == parent;
+      });
+    }
+    return list.find(function(item) {
       return item["id"] == id;
     });
   }
