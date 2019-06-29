@@ -3,7 +3,7 @@ const express = require("express");
 const server = express();
 server.use(express.json());
 
-const init = {
+const database = {
   project: {
     details: {
       "slug-singular": "project",
@@ -55,12 +55,13 @@ const init = {
 };
 
 class App {
-  constructor() {
+  constructor(init) {
+    this.init = init;
     this.CustomPostType();
     this.Pages();
   }
   CustomPostType() {
-    for (const cpt in init) {
+    for (const cpt in this.init) {
       this[cpt] = [];
       //DATABASE
       this[`${cpt}AI`] = 0; //Auto Increment
@@ -68,37 +69,42 @@ class App {
     }
   }
   Pages() {
-    for (const cpt in init) {
+    for (const cpt in this.init) {
       //CREATE
-      server.post(`/${init[cpt]["details"]["slug-singular"]}`, (req, res) => {
-        const post = {};
-        for (const field in init[cpt]["body"]) {
-          if (!req.body[field]) {
-            if (!this.RequiredCheck(req, res, cpt, field)) {
-              return res.status(400).json({
-                error: `${init[cpt]["body"][field]["label"]} is required`
-              });
+      server.post(
+        `/${this.init[cpt]["details"]["slug-singular"]}`,
+        (req, res) => {
+          const post = {};
+          for (const field in this.init[cpt]["body"]) {
+            if (!req.body[field]) {
+              if (!this.RequiredCheck(req, res, cpt, field)) {
+                return res.status(400).json({
+                  error: `${this.init[cpt]["body"][field]["label"]} is required`
+                });
+              }
+            } else {
+              post[field] = req.body[field];
             }
-          } else {
-            post[field] = req.body[field];
           }
+          this.Add(cpt, post);
+          return res.json(this.List(cpt));
         }
-        this.Add(cpt, post);
-        return res.json(this.List(cpt));
-      });
+      );
       //LIST
-      server.get(`/${init[cpt]["details"]["slug-plural"]}`, (req, res) => {
+      server.get(`/${this.init[cpt]["details"]["slug-plural"]}`, (req, res) => {
         return res.json(this.List(cpt));
       });
       //VIEW
       server.get(
-        `/${init[cpt]["details"]["slug-singular"]}/:id`,
+        `/${this.init[cpt]["details"]["slug-singular"]}/:id`,
         (req, res) => {
           const { id } = req.params;
           const post = this.View(cpt, id);
           if (!post) {
             return res.status(400).json({
-              error: `${init[cpt]["details"]["title-singular"]} does not exists`
+              error: `${
+                this.init[cpt]["details"]["title-singular"]
+              } does not exists`
             });
           }
           return res.json(post);
@@ -106,21 +112,23 @@ class App {
       );
       //UPDATE
       server.put(
-        `/${init[cpt]["details"]["slug-singular"]}/:id`,
+        `/${this.init[cpt]["details"]["slug-singular"]}/:id`,
         (req, res) => {
           const { id } = req.params;
           const postExists = this.View(cpt, id);
           if (!postExists) {
             return res.status(400).json({
-              error: `${init[cpt]["details"]["title-singular"]} does not exists`
+              error: `${
+                this.init[cpt]["details"]["title-singular"]
+              } does not exists`
             });
           }
           const post = {};
-          for (const field in init[cpt]["body"]) {
+          for (const field in this.init[cpt]["body"]) {
             if (!req.body[field]) {
               if (!this.RequiredCheck(req, res, cpt, field)) {
                 return res.status(400).json({
-                  error: `${init[cpt]["body"][field]["label"]} is required`
+                  error: `${this.init[cpt]["body"][field]["label"]} is required`
                 });
               }
             } else {
@@ -133,13 +141,15 @@ class App {
       );
       //DELETE
       server.delete(
-        `/${init[cpt]["details"]["slug-singular"]}/:id`,
+        `/${this.init[cpt]["details"]["slug-singular"]}/:id`,
         (req, res) => {
           const { id } = req.params;
           const post = this.View(cpt, id);
           if (!post) {
             return res.status(400).json({
-              error: `${init[cpt]["details"]["title-singular"]} does not exists`
+              error: `${
+                this.init[cpt]["details"]["title-singular"]
+              } does not exists`
             });
           }
           this.Delete(req, res, cpt, id);
@@ -157,7 +167,9 @@ class App {
   }
   List(cpt) {
     if (this[cpt].length == 0) {
-      return { error: `No ${init[cpt]["details"]["title-singular"]} created` };
+      return {
+        error: `No ${this.init[cpt]["details"]["title-singular"]} created`
+      };
     } else {
       return this[cpt];
     }
@@ -170,7 +182,7 @@ class App {
   Update(req, res, cpt, id, post) {
     this[cpt].forEach((item, index) => {
       if (item["id"] == id) {
-        for (const field in init[cpt]["body"]) {
+        for (const field in this.init[cpt]["body"]) {
           if (!req.body[field]) {
           } else {
             post[field] = req.body[field];
@@ -190,13 +202,13 @@ class App {
   }
   RequiredCheck(req, res, cpt, field) {
     if (!req.body[field]) {
-      if (init[cpt]["body"][field]["required"]) {
+      if (this.init[cpt]["body"][field]["required"]) {
         return false;
       }
     }
   }
 }
-const Application = new App();
+const Application = new App(database);
 
 //LISTEN PORT
 server.listen(3000);
