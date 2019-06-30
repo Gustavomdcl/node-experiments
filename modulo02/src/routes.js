@@ -1,5 +1,5 @@
-//const { Router } = require("express");
-//OU (com sucrase)
+// const { Router } = require("express");
+// OU (com sucrase)
 import { Router } from "express";
 
 const routes = new Router();
@@ -8,6 +8,6 @@ routes.get("/", (req, res) => {
   return res.json({ message: "Hello Dog" });
 });
 
-//module.exports = routes;
-//OU (com sucrase)
+// module.exports = routes;
+// OU (com sucrase)
 export default routes;
