@@ -1,0 +1,41 @@
+Arguments: 
+  /Users/gustavolima/.nvm/versions/node/v10.16.0/bin/node /usr/local/Cellar/yarn/1.16.0/libexec/bin/yarn.js add express
+
+PATH: 
+  /Users/gustavolima/.nvm/versions/node/v10.16.0/bin:/Users/gustavolima/.nvm/versions/node/v10.16.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/gustavolima/.nvm/versions/node/v10.16.0/bin
+
+Yarn version: 
+  1.16.0
+
+Node version: 
+  10.16.0
+
+Platform: 
+  darwin x64
+
+Trace: 
+  Error: https://registry.yarnpkg.com/content-disposition/-/content-disposition-0.5.3.tgz: Request failed "503 Service Unavailable"
+      at ResponseError.ExtendableBuiltin (/usr/local/Cellar/yarn/1.16.0/libexec/lib/cli.js:696:66)
+      at new ResponseError (/usr/local/Cellar/yarn/1.16.0/libexec/lib/cli.js:802:124)
+      at Request.<anonymous> (/usr/local/Cellar/yarn/1.16.0/libexec/lib/cli.js:66161:16)
+      at Request.emit (events.js:198:13)
+      at Request.module.exports.Request.onRequestResponse (/usr/local/Cellar/yarn/1.16.0/libexec/lib/cli.js:130467:10)
+      at ClientRequest.emit (events.js:203:15)
+      at HTTPParser.parserOnIncomingClient [as onIncoming] (_http_client.js:556:21)
+      at HTTPParser.parserOnHeadersComplete (_http_common.js:109:17)
+      at TLSSocket.socketOnData (_http_client.js:442:20)
+      at TLSSocket.emit (events.js:198:13)
+
+npm manifest: 
+  {
+    "name": "crud-creation",
+    "version": "1.0.0",
+    "main": "index.js",
+    "license": "MIT"
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
