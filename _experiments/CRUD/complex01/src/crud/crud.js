@@ -43,12 +43,63 @@ class CRUD {
     List() {
       return this.crud;
     }
-    Migration(type=this.type) {
-      let migration = {};
-      const loop = this.crud[type]['body'];
-      for (let field in loop) {
-        migration[field] = loop[field];
+    Migration() {
+      var migration = '<pre>';
+      const types = this.crud;
+      for (let type in types) {
+        migration += 'module.exports = {<br>';
+        migration += '  up: (queryInterface, Sequelize) => {<br>';
+        migration += `    return queryInterface.createTable('${this.crud[type]['details']['slugPlural']}', {<br>`;
+
+        migration += '      id: {<br>';
+        migration += '        type: Sequelize.INTEGER,<br>';
+        migration += '        allowNull: false,<br>';
+        migration += '        autoIncrement: true,<br>';
+        migration += '        primaryKey: true,<br>';
+        migration += '      },<br>';
+
+        if(type!='user'){//usuários não recebem author
+          migration += '      author: {<br>';
+          migration += '        type: Sequelize.INTEGER,<br>';//Linka com o id do author
+          migration += '        allowNull: false,<br>';
+          migration += '      },<br>';
+        }
+
+        const fields = types[type]['body'];
+        for (let field in fields) {
+          //migration[field] = fields[field];
+          migration += `      ${field}: {<br>`;
+          if(fields[field]['format']=='different'){} else {
+            migration += '        type: Sequelize.STRING,<br>';
+          }
+          if(fields[field]['required']==true){
+            migration += '        allowNull: false,<br>';
+          } else {
+            migration += '        allowNull: true,<br>';
+          }
+          if((field=='email'&&type=='user')||(field=='username'&&type=='user')){
+            migration += '        unique: true,<br>';
+          }
+          migration += '      },<br>';
+        }
+
+        migration += '      created_at: {<br>';
+        migration += '        type: Sequelize.DATE,<br>';
+        migration += '        allowNull: false,<br>';
+        migration += '      },<br>';
+        migration += '      updated_at: {<br>';
+        migration += '        type: Sequelize.DATE,<br>';
+        migration += '        allowNull: false,<br>';
+        migration += '      },<br>';
+
+        migration += '    });<br>';
+        migration += '  },<br>';
+        migration += '  down: (queryInterface, Sequelize) => {<br>';
+        migration += `    return queryInterface.dropTable('${this.crud[type]['details']['slugPlural']}');<br>`;
+        migration += '  }<br>';
+        migration += '};<br><br><br>';
       }
+      migration += '</pre>';
       return migration;
     }
     //Details
