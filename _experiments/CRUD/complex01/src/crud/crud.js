@@ -1,3 +1,5 @@
+import CreateFile from "./create.js";
+
 class CRUD {
   constructor() {
     this.crud = {};
@@ -112,88 +114,99 @@ class CRUD {
       return migration;
     }
     Models() {
-      var model = '<pre style="background-color:#666;margin:-15px -8px;">';
+      var model = {};
+      var breakLine = "\n";
       const types = this.crud;
       var models = '[';
       var imports = '';
       var model_count = 0;
       for (let type in types) {
         var modelName = this.crud[type]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[type]['details']['slugSingular'].slice(1);
-        imports += `import User from '../app/models/${modelName}';<br>`;
+        imports += `import User from '../app/models/${modelName}';`+breakLine;
         if(model_count!=0){
           models += ',';
         }
         model_count++;
         models += modelName;
-        model += `<p style="background-color:#000;color:#fff;">${modelName}.js</p>`;
-        model += `import Sequelize, { Model } from 'sequelize';<br>`;
+        model[`${modelName}.js`] = '';
+        model[`${modelName}.js`] += `import Sequelize, { Model } from 'sequelize';`+breakLine;
         if(type=='user'){//Para senhas de usuários
-          model += `import bcrypt from 'bcryptjs';<br>`;
+          model[`${modelName}.js`] += `import bcrypt from 'bcryptjs';`+breakLine;
         }
-        model += '<br>';
+        model[`${modelName}.js`] += ''+breakLine;
 
-        model += `class ${modelName} extends Model {<br>`;
-        model += '  static init(sequelize){<br>';
-        model += '    super.init(<br>';
-        model += '      {<br>';
+        model[`${modelName}.js`] += `class ${modelName} extends Model {`+breakLine;
+        model[`${modelName}.js`] += '  static init(sequelize){'+breakLine;
+        model[`${modelName}.js`] += '    super.init('+breakLine;
+        model[`${modelName}.js`] += '      {'+breakLine;
         const fields = types[type]['body'];
         for (let field in fields) {
           if(type!='user'){//usuários não recebem author
-            model += '        author: Sequelize.INTEGER,<br>';
+            model[`${modelName}.js`] += '        author: Sequelize.INTEGER,'+breakLine;
           }
           if(types[type]['relation']!=false){
-            model += `        ${types[type]['relation']}: Sequelize.INTEGER,<br>`;
+            model[`${modelName}.js`] += `        ${types[type]['relation']}: Sequelize.INTEGER,`+breakLine;
           }
           if(field=='password_hash'&&type=='user'){
-            model += '        password: Sequelize.STRING,<br>';
+            model[`${modelName}.js`] += '        password: Sequelize.STRING,'+breakLine;
           }
           if(fields[field]['format']=='different'){} else {
-            model += `        ${field}: Sequelize.STRING,<br>`;
+            model[`${modelName}.js`] += `        ${field}: Sequelize.STRING,`+breakLine;
           }
         }
-        model += '      },<br>';
-        model += '      {<br>';
-        model += '        sequelize,<br>';
-        model += '      }<br>';
-        model += '    );<br>';
+        model[`${modelName}.js`] += '      },'+breakLine;
+        model[`${modelName}.js`] += '      {'+breakLine;
+        model[`${modelName}.js`] += '        sequelize,'+breakLine;
+        model[`${modelName}.js`] += '      }'+breakLine;
+        model[`${modelName}.js`] += '    );'+breakLine;
         if(type=='user'){
-          model += `    this.addHook('beforeSave', async user => {<br>`;
-          model += '      if (user.password) {<br>';
-          model += '        user.password_hash = await bcrypt.hash(user.password, 8);<br>';
-          model += '      }<br>';
-          model += '    });<br>';
+          model[`${modelName}.js`] += `    this.addHook('beforeSave', async user => {`+breakLine;
+          model[`${modelName}.js`] += '      if (user.password) {'+breakLine;
+          model[`${modelName}.js`] += '        user.password_hash = await bcrypt.hash(user.password, 8);'+breakLine;
+          model[`${modelName}.js`] += '      }'+breakLine;
+          model[`${modelName}.js`] += '    });'+breakLine;
         }
-        model += '  }<br>';
+        model[`${modelName}.js`] += '  }'+breakLine;
         if(type=='user'){
-          model += '  checkPassword(password) {<br>';
-          model += '    return bcrypt.compare(password, this.password_hash);<br>';
-          model += '  }<br>';
+          model[`${modelName}.js`] += '  checkPassword(password) {'+breakLine;
+          model[`${modelName}.js`] += '    return bcrypt.compare(password, this.password_hash);'+breakLine;
+          model[`${modelName}.js`] += '  }'+breakLine;
         }
-        model += '}<br>';
-        model += '<br>';
+        model[`${modelName}.js`] += '}'+breakLine;
+        model[`${modelName}.js`] += ''+breakLine;
 
-        model += `export default ${modelName};<br><br>`;
+        model[`${modelName}.js`] += `export default ${modelName};`+breakLine;
       }
       models += ']';
-      model += '<p style="background-color:#000;color:red;">database/index.js</p>';
-      model += `import Sequelize from 'sequelize';<br>`;
-      model += imports;
-      model += `import databaseConfig from '../config/database';<br>`;
-      model += '<br>';
-      model += `const models = ${models};<br>`;
-      model += '<br>';
-      model += 'class Database {<br>';
-      model += '  constructor(){<br>';
-      model += '    this.init();<br>';
-      model += '  }<br>';
-      model += '  init(){<br>';
-      model += '    this.connection = new Sequelize(databaseConfig);<br>';
-      model += '    models.map(model => model.init(this.connection));<br>';
-      model += '  }<br>';
-      model += '}<br>';
-      model += '<br>';
-      model += 'export default new Database();<br><br><br>';
-      model += '</pre>';
+      model['index.js'] = '';
+      model['index.js'] += `import Sequelize from 'sequelize';`+breakLine;
+      model['index.js'] += imports;
+      model['index.js'] += `import databaseConfig from '../config/database';`+breakLine;
+      model['index.js'] += ''+breakLine;
+      model['index.js'] += `const models = ${models};`+breakLine;
+      model['index.js'] += ''+breakLine;
+      model['index.js'] += 'class Database {'+breakLine;
+      model['index.js'] += '  constructor(){'+breakLine;
+      model['index.js'] += '    this.init();'+breakLine;
+      model['index.js'] += '  }'+breakLine;
+      model['index.js'] += '  init(){'+breakLine;
+      model['index.js'] += '    this.connection = new Sequelize(databaseConfig);'+breakLine;
+      model['index.js'] += '    models.map(model => model.init(this.connection));'+breakLine;
+      model['index.js'] += '  }'+breakLine;
+      model['index.js'] += '}'+breakLine;
+      model['index.js'] += ''+breakLine;
+      model['index.js'] += 'export default new Database();'+breakLine;
+      for (let file in model) {
+        if(file=='index.js'){
+          var path = "./src/database/"+file;
+          message = model[file];
+          CreateFile.Generate(path,message);
+        } else {
+          var path = "./src/app/models/"+file;
+          var message = model[file];
+          CreateFile.Generate(path,message);
+        }
+      }
       return model;
     }
     //Details

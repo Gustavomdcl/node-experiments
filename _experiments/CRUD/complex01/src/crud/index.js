@@ -19,6 +19,9 @@ CRUD
     .Details('task','tasks','Tarefa','Tarefas','a')
     .Relation('project')
     .Field()
-    .Field('description','text',true,'Descrição','Descreva sua tarefa',false);
+    .Field('description','text',true,'Descrição','Descreva sua tarefa',false)
+  //Creation
+    .Models();
+
 
 export default CRUD;
