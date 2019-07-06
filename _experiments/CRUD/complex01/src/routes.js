@@ -1,5 +1,5 @@
 import {Router} from 'express';
-//import User from './app/models/User';
+import User from './app/models/User';
 import CRUD from './crud/index.js';
 
 const routes = new Router();
