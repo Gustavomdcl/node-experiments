@@ -46,71 +46,82 @@ class CRUD {
       return this.crud;
     }
     Migration() {
-      var migration = '<pre style="background-color:#666;margin:-15px -8px;">';
+      var migration = {};
+      var breakLine = "\n";
+      var migrationCount = 9;
+      var migrationName = '';
       const types = this.crud;
       for (let type in types) {
-        migration += `<p style="background-color:#000;color:#fff;">yarn sequelize migration:create --name=create-${this.crud[type]['details']['slugPlural']}</p>`;
-        migration += 'module.exports = {<br>';
-        migration += '  up: (queryInterface, Sequelize) => {<br>';
-        migration += `    return queryInterface.createTable('${this.crud[type]['details']['slugPlural']}', {<br>`;
+        migrationCount++;
+        migrationName = `201811031030${migrationCount}-create-${this.crud[type]['details']['slugPlural']}.js`;
+        migration[migrationName] = 'module.exports = {'+breakLine;
+        migration[migrationName] += '  up: (queryInterface, Sequelize) => {'+breakLine;
+        migration[migrationName] += `    return queryInterface.createTable('${this.crud[type]['details']['slugPlural']}', {`+breakLine;
 
-        migration += '      id: {<br>';
-        migration += '        type: Sequelize.INTEGER,<br>';
-        migration += '        allowNull: false,<br>';
-        migration += '        autoIncrement: true,<br>';
-        migration += '        primaryKey: true,<br>';
-        migration += '      },<br>';
+        migration[migrationName] += '      id: {'+breakLine;
+        migration[migrationName] += '        type: Sequelize.INTEGER,'+breakLine;
+        migration[migrationName] += '        allowNull: false,'+breakLine;
+        migration[migrationName] += '        autoIncrement: true,'+breakLine;
+        migration[migrationName] += '        primaryKey: true,'+breakLine;
+        migration[migrationName] += '      },'+breakLine;
 
         if(type!='user'){//usuários não recebem author
-          migration += '      author: {<br>';
-          migration += '        type: Sequelize.INTEGER,<br>';//Linka com o id do author
-          migration += '        allowNull: false,<br>';
-          migration += '      },<br>';
+          migration[migrationName] += '      author: {'+breakLine;
+          migration[migrationName] += '        type: Sequelize.INTEGER,'+breakLine;//Linka com o id do author
+          migration[migrationName] += '        allowNull: false,'+breakLine;
+          migration[migrationName] += '      },'+breakLine;
         }
 
         if(types[type]['relation']!=false){
-          migration += `      ${types[type]['relation']}: {<br>`;
-          migration += '        type: Sequelize.INTEGER,<br>';//Linka com o elemento pai
-          migration += '        allowNull: false,<br>';
-          migration += '      },<br>';
+          migration[migrationName] += `      ${types[type]['relation']}: {`+breakLine;
+          migration[migrationName] += '        type: Sequelize.INTEGER,'+breakLine;//Linka com o elemento pai
+          migration[migrationName] += '        allowNull: false,'+breakLine;
+          migration[migrationName] += '      },'+breakLine;
         }
 
         const fields = types[type]['body'];
         for (let field in fields) {
           //migration[field] = fields[field];
-          migration += `      ${field}: {<br>`;
+          migration[migrationName] += `      ${field}: {`+breakLine;
           if(fields[field]['format']=='different'){} else {
-            migration += '        type: Sequelize.STRING,<br>';
+            migration[migrationName] += '        type: Sequelize.STRING,'+breakLine;
           }
           if(fields[field]['required']==true){
-            migration += '        allowNull: false,<br>';
+            migration[migrationName] += '        allowNull: false,'+breakLine;
           } else {
-            migration += '        allowNull: true,<br>';
+            migration[migrationName] += '        allowNull: true,'+breakLine;
           }
           if((field=='password_hash')){
-            migration += '        unique: true,<br>';
+            migration[migrationName] += '        unique: true,'+breakLine;
           }
-          migration += '      },<br>';
+          migration[migrationName] += '      },'+breakLine;
         }
 
-        migration += '      created_at: {<br>';
-        migration += '        type: Sequelize.DATE,<br>';
-        migration += '        allowNull: false,<br>';
-        migration += '      },<br>';
-        migration += '      updated_at: {<br>';
-        migration += '        type: Sequelize.DATE,<br>';
-        migration += '        allowNull: false,<br>';
-        migration += '      },<br>';
+        migration[migrationName] += '      created_at: {'+breakLine;
+        migration[migrationName] += '        type: Sequelize.DATE,'+breakLine;
+        migration[migrationName] += '        allowNull: false,'+breakLine;
+        migration[migrationName] += '      },'+breakLine;
+        migration[migrationName] += '      updated_at: {'+breakLine;
+        migration[migrationName] += '        type: Sequelize.DATE,'+breakLine;
+        migration[migrationName] += '        allowNull: false,'+breakLine;
+        migration[migrationName] += '      },'+breakLine;
 
-        migration += '    });<br>';
-        migration += '  },<br>';
-        migration += '  down: (queryInterface, Sequelize) => {<br>';
-        migration += `    return queryInterface.dropTable('${this.crud[type]['details']['slugPlural']}');<br>`;
-        migration += '  }<br>';
-        migration += '};<br><br>';
+        migration[migrationName] += '    });'+breakLine;
+        migration[migrationName] += '  },'+breakLine;
+        migration[migrationName] += '  down: (queryInterface, Sequelize) => {'+breakLine;
+        migration[migrationName] += `    return queryInterface.dropTable('${this.crud[type]['details']['slugPlural']}');`+breakLine;
+        migration[migrationName] += '  }'+breakLine;
+        migration[migrationName] += '};'+breakLine;
       }
-      migration += '<p style="background-color:#000;color:red;">yarn sequelize db:migrate</p>';
-      migration += '</pre>';
+      for (let file in migration) {
+        var path = "./src/database";
+        CreateFile.GenerateDir(path);
+        path += "/migrations";
+        CreateFile.GenerateDir(path);
+        path += '/'+file;
+        var message = migration[file];
+        CreateFile.GenerateFile(path,message);
+      }
       return migration;
     }
     Models() {
