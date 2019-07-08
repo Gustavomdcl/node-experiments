@@ -159,7 +159,7 @@ class CRUD {
             model[`${modelName}.js`] += `        ${types[type]['relation']}: Sequelize.INTEGER,`+breakLine;
           }
           if(field=='password_hash'&&type=='user'){
-            model[`${modelName}.js`] += '        password: Sequelize.STRING,'+breakLine;
+            model[`${modelName}.js`] += '        password: Sequelize.VIRTUAL,'+breakLine;
           }
           if(fields[field]['format']=='different'){} else {
             model[`${modelName}.js`] += `        ${field}: Sequelize.STRING,`+breakLine;
@@ -177,6 +177,7 @@ class CRUD {
           model[`${modelName}.js`] += '      }'+breakLine;
           model[`${modelName}.js`] += '    });'+breakLine;
         }
+        model[`${modelName}.js`] += '    return this;'+breakLine;
         model[`${modelName}.js`] += '  }'+breakLine;
         if(type=='user'){
           model[`${modelName}.js`] += '  checkPassword(password) {'+breakLine;
