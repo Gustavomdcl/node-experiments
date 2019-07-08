@@ -28,7 +28,7 @@ class CRUD {
       this.crud[type]['relation'] = relation;
       return this;
     }
-    Field(field='title',format='text',required=false,label='Title',placeholder='Type your title',options=false,type=this.type) {
+    Field(field='title',format='text',required=false,label='Title',placeholder='Type your title',options=false,unique=false,type=this.type) {
       if(!this.crud[type]['body']){
         this.crud[type]['body']={};
       }
@@ -37,7 +37,8 @@ class CRUD {
         required,
         label,
         placeholder,
-        options
+        options,
+        unique
       };
       return this;
     }
@@ -91,7 +92,7 @@ class CRUD {
           } else {
             migration[migrationName] += '        allowNull: true,'+breakLine;
           }
-          if((field=='password_hash')){
+          if((fields[field]['unique']==true)){
             migration[migrationName] += '        unique: true,'+breakLine;
           }
           migration[migrationName] += '      },'+breakLine;

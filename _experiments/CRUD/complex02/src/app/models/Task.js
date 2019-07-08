@@ -10,11 +10,15 @@ class Task extends Model {
         author: Sequelize.INTEGER,
         project: Sequelize.INTEGER,
         description: Sequelize.STRING,
+        author: Sequelize.INTEGER,
+        project: Sequelize.INTEGER,
+        email: Sequelize.STRING,
       },
       {
         sequelize,
       }
     );
+    return this;
   }
 }
 

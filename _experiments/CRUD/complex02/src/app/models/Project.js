@@ -8,11 +8,14 @@ class Project extends Model {
         title: Sequelize.STRING,
         author: Sequelize.INTEGER,
         description: Sequelize.STRING,
+        author: Sequelize.INTEGER,
+        email: Sequelize.STRING,
       },
       {
         sequelize,
       }
     );
+    return this;
   }
 }
 
