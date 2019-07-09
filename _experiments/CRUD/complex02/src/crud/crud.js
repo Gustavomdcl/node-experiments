@@ -42,7 +42,7 @@ class CRUD {
       };
       return this;
     }
-  //READ
+  //SETUP
     List() {
       return this.crud;
     }
@@ -228,6 +228,165 @@ class CRUD {
       }
       return model;
     }
+    Controllers() {
+      var controller = {};
+      var breakLine = "\n";
+      const types = this.crud;
+      for (let type in types) {
+        var controllerName = this.crud[type]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[type]['details']['slugSingular'].slice(1);
+        controller[`${controllerName}Controller.js`] = '';
+        controller[`${controllerName}Controller.js`] += `import * as Yup from 'yup';`+breakLine;
+        controller[`${controllerName}Controller.js`] += `import ${controllerName} from '../models/${controllerName}';`+breakLine;
+        controller[`${controllerName}Controller.js`] += ``+breakLine;
+        controller[`${controllerName}Controller.js`] += `class ${controllerName}Controller {`+breakLine;
+        //STORE
+        controller[`${controllerName}Controller.js`] += ` async store(req,res){`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   const schema = Yup.object().shape({`+breakLine;
+        const fields = types[type]['body'];
+        for (let field in fields) {
+          if(field=='password_hash'){
+            controller[`${controllerName}Controller.js`] += `     password: Yup.string()`;
+          } else {
+            controller[`${controllerName}Controller.js`] += `     ${field}: Yup.string()`;
+          }
+          if(field=='email'){
+            controller[`${controllerName}Controller.js`] += `.email()`;
+          }
+          if(fields[field]['required']==true){
+            controller[`${controllerName}Controller.js`] += `.required()`;
+          }
+          if(fields[field]['options']!=false){
+            var optionsAll = '';
+            for (let option in fields[field]['options']) {
+              if(!(optionsAll=='')){
+                optionsAll += `,`;
+              }
+              optionsAll += `'`+fields[field]['options'][option]+`'`;
+            }
+            controller[`${controllerName}Controller.js`] += `.oneOf([${optionsAll}])`;
+          }
+          if(field=='password_hash'){
+            controller[`${controllerName}Controller.js`] += `.min(6)`;
+          }
+          controller[`${controllerName}Controller.js`] += `,`+breakLine;
+        }
+        controller[`${controllerName}Controller.js`] += `   });`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   if(!(await schema.isValid(req.body))){`+breakLine;
+        controller[`${controllerName}Controller.js`] += `     return res.status(400).json({error:'Validation Fails'});`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+        for (let field in fields) {
+          if(fields[field]['unique']==true){
+            controller[`${controllerName}Controller.js`] += `   const ${field}Exists = await ${controllerName}.findOne({ where: { ${field}: req.body.${field} } });`+breakLine;
+            controller[`${controllerName}Controller.js`] += `   if(${field}Exists){`+breakLine;
+            controller[`${controllerName}Controller.js`] += `     return res.status(400).send({ error: '${this.crud[type]['details']['titleSingular']} already exists.' });`+breakLine;
+            controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+          }
+        }
+        var fieldAll = '';
+        for (let field in fields) {
+          if(field!='password_hash'){
+            if(!fieldAll==''){
+              fieldAll += ',';
+            } else {
+              fieldAll += 'id,';
+            }
+            fieldAll += field;
+          }
+        }
+        controller[`${controllerName}Controller.js`] += `   const {${fieldAll}} = await ${controllerName}.create(req.body);`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   return res.json({${fieldAll}});`+breakLine;
+        controller[`${controllerName}Controller.js`] += ` }`+breakLine;
+        //STORE
+        //UPDATE
+        controller[`${controllerName}Controller.js`] += ` async update(req,res){`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   const schema = Yup.object().shape({`+breakLine;
+        for (let field in fields) {
+          if(field=='password_hash'){
+            controller[`${controllerName}Controller.js`] += `     oldPassword: Yup.string().min(6),`+breakLine;
+            controller[`${controllerName}Controller.js`] += `     password: Yup.string()`;
+          } else {
+            controller[`${controllerName}Controller.js`] += `     ${field}: Yup.string()`;
+          }
+          if(field=='email'){
+            controller[`${controllerName}Controller.js`] += `.email()`;
+          }
+          if(fields[field]['options']!=false){
+            var optionsAll = '';
+            for (let option in fields[field]['options']) {
+              if(!(optionsAll=='')){
+                optionsAll += `,`;
+              }
+              optionsAll += `'`+fields[field]['options'][option]+`'`;
+            }
+            controller[`${controllerName}Controller.js`] += `.oneOf([${optionsAll}])`;
+          }
+          if(field=='password_hash'){
+            controller[`${controllerName}Controller.js`] += `.min(6)`;
+          }
+          if(field=='password_hash'){
+            controller[`${controllerName}Controller.js`] += `.when('oldPassword',(oldPassword,field)=>oldPassword?field.required():field)`;
+          }
+          controller[`${controllerName}Controller.js`] += `,`+breakLine;
+          if(field=='password_hash'){
+            controller[`${controllerName}Controller.js`] += `     confirmPassword: Yup.string().when('password',(password,field)=>password?field.required().oneOf([Yup.ref('password')]):field),`+breakLine;
+          }
+        }
+        controller[`${controllerName}Controller.js`] += `   });`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   if(!(await schema.isValid(req.body))){`+breakLine;
+        controller[`${controllerName}Controller.js`] += `     return res.status(400).json({error:'Validation Fails'});`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+        var uniqueAll = '';
+        for (let field in fields) {
+          if(fields[field]['unique']==true){
+            if(!uniqueAll==''){
+              uniqueAll += ',';
+            }
+            uniqueAll += field;
+          }
+          if(field=='password_hash'){
+            if(!uniqueAll==''){
+              uniqueAll += ',';
+            }
+            uniqueAll += 'oldPassword';
+          }
+        }
+        controller[`${controllerName}Controller.js`] += `   const {${uniqueAll}} = req.body;`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   const ${this.crud[type]['details']['slugSingular']} = await ${controllerName}.findByPk(req.${this.crud[type]['details']['slugSingular']}Id);`+breakLine;
+        for (let field in fields) {
+          if(fields[field]['unique']==true){
+            controller[`${controllerName}Controller.js`] += `   if(${field}!==${this.crud[type]['details']['slugSingular']}.${field}){`+breakLine;
+            controller[`${controllerName}Controller.js`] += `     const ${field}Exists = await ${controllerName}.findOne({ where: { ${field} } });`+breakLine;
+            controller[`${controllerName}Controller.js`] += `     if(${field}Exists){`+breakLine;
+            controller[`${controllerName}Controller.js`] += `       return res.status(400).send({ error: '${this.crud[type]['details']['titleSingular']} already exists.' });`+breakLine;
+            controller[`${controllerName}Controller.js`] += `     }`+breakLine;
+            controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+          }
+          if(field=='password_hash'){
+            controller[`${controllerName}Controller.js`] += `   if(oldPassword && !(await ${this.crud[type]['details']['slugSingular']}.checkPassword(oldPassword))){`+breakLine;
+            controller[`${controllerName}Controller.js`] += `     return res.status(401).send({ error: 'Password does not match' });`+breakLine;
+            controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+          }
+        }
+        controller[`${controllerName}Controller.js`] += `   const {${fieldAll}} = await ${this.crud[type]['details']['slugSingular']}.update(req.body);`+breakLine;
+        controller[`${controllerName}Controller.js`] += `   return res.json({${fieldAll}});`+breakLine;
+        controller[`${controllerName}Controller.js`] += ` }`+breakLine;
+        //UPDATE
+        controller[`${controllerName}Controller.js`] += `}`+breakLine;
+        controller[`${controllerName}Controller.js`] += ``+breakLine;
+        controller[`${controllerName}Controller.js`] += `export default new ${controllerName}Controller;`+breakLine;
+      }
+      for (let file in controller) {
+        var path = "./src/app";
+        CreateFile.GenerateDir(path);
+        path += "/controllers";
+        CreateFile.GenerateDir(path);
+        path += '/'+file;
+        var message = controller[file];
+        CreateFile.GenerateFile(path,message);
+      }
+      return controller;
+    }
+  //READ
     //Details
       slugSingular(type=this.type) {
         return this.crud[type]['details']['slugSingular'];
