@@ -1,0 +1,18 @@
+controller[`auth.js`] += `import jwt from 'jsonwebtoken';`+breakLine;
+controller[`auth.js`] += `import {promisify} from 'util';`+breakLine;
+controller[`auth.js`] += `import authConfig from '../../config/auth';`+breakLine;
+controller[`auth.js`] += ``+breakLine;
+controller[`auth.js`] += `export default async (req,res,next)=>{`+breakLine;
+controller[`auth.js`] += `  const authHeader = req.headers.authorization;`+breakLine;
+controller[`auth.js`] += `  if(!authHeader){`+breakLine;
+controller[`auth.js`] += `    return res.status(401).json({error: 'Token not provided'});`+breakLine;
+controller[`auth.js`] += `  }`+breakLine;
+controller[`auth.js`] += `  const [, token] = authHeader.split(' ');`+breakLine;
+controller[`auth.js`] += `  try {`+breakLine;
+controller[`auth.js`] += `    const decoded = await promisify(jwt.verify)(token,authConfig.secret);`+breakLine;
+controller[`auth.js`] += `    req.userId = decoded.id;`+breakLine;
+controller[`auth.js`] += `    return next();`+breakLine;
+controller[`auth.js`] += `  } catch(err) {`+breakLine;
+controller[`auth.js`] += `    return res.status(401).json({error: 'Token invalid'});`+breakLine;
+controller[`auth.js`] += `  }`+breakLine;
+controller[`auth.js`] += `};`+breakLine;

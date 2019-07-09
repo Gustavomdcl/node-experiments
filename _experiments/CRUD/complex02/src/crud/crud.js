@@ -237,10 +237,40 @@ class CRUD {
         controller[`${controllerName}Controller.js`] = '';
         controller[`${controllerName}Controller.js`] += `import * as Yup from 'yup';`+breakLine;
         controller[`${controllerName}Controller.js`] += `import ${controllerName} from '../models/${controllerName}';`+breakLine;
+        if(type!='user') {
+          controller[`${controllerName}Controller.js`] += `import User from '../models/User';`+breakLine;
+        }
+        var relation = types[type]['relation'];
+        var relationName;
+        if(relation!=false){
+          relationName = this.crud[relation]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[relation]['details']['slugSingular'].slice(1);
+          controller[`${controllerName}Controller.js`] += `import ${relationName} from '../models/${relationName}';`+breakLine;
+        }
         controller[`${controllerName}Controller.js`] += ``+breakLine;
         controller[`${controllerName}Controller.js`] += `class ${controllerName}Controller {`+breakLine;
         //STORE
-        controller[`${controllerName}Controller.js`] += ` async store(req,res){`+breakLine;
+        controller[`${controllerName}Controller.js`] += `  async store(req,res){`+breakLine;
+        if(relation!=false){
+          controller[`${controllerName}Controller.js`] += `   req.${relation}Id = req.params.parent;`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   if(!(req.${relation}Id)){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     return res.status(401).json({error:'${this.crud[relation]['details']['titleSingular']} not found.'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+
+          controller[`${controllerName}Controller.js`] += `   const ${relation}IdExists = await ${relationName}.count({where:{id:req.${relation}Id}});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   if(${relation}IdExists==0){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     return res.status(401).json({error:'${this.crud[relation]['details']['titleSingular']} not found.'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+
+          controller[`${controllerName}Controller.js`] += `   const ${relation} = await ${relationName}.findByPk(req.${relation}Id);`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   const user = await User.findByPk(req.userId);`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   if(${relation}.author!=user.id){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     if(user.role=='Administrador'||user.role=='Gerente'){}else{`+breakLine;
+          controller[`${controllerName}Controller.js`] += `       return res.status(401).json({error:'User not allowed'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     }`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+
+          controller[`${controllerName}Controller.js`] += `   req.body.${relation} = ${relation}.id;`+breakLine;
+        }
         controller[`${controllerName}Controller.js`] += `   const schema = Yup.object().shape({`+breakLine;
         const fields = types[type]['body'];
         for (let field in fields) {
@@ -256,14 +286,16 @@ class CRUD {
             controller[`${controllerName}Controller.js`] += `.required()`;
           }
           if(fields[field]['options']!=false){
-            var optionsAll = '';
-            for (let option in fields[field]['options']) {
-              if(!(optionsAll=='')){
-                optionsAll += `,`;
+            if(fields[field]['format']=='radio'||fields[field]['format']=='select'){
+              var optionsAll = '';
+              for (let option in fields[field]['options']) {
+                if(!(optionsAll=='')){
+                  optionsAll += `,`;
+                }
+                optionsAll += `'`+fields[field]['options'][option]+`'`;
               }
-              optionsAll += `'`+fields[field]['options'][option]+`'`;
+              controller[`${controllerName}Controller.js`] += `.oneOf([${optionsAll}])`;
             }
-            controller[`${controllerName}Controller.js`] += `.oneOf([${optionsAll}])`;
           }
           if(field=='password_hash'){
             controller[`${controllerName}Controller.js`] += `.min(6)`;
@@ -293,12 +325,34 @@ class CRUD {
             fieldAll += field;
           }
         }
+        if(type!='user'){
+          controller[`${controllerName}Controller.js`] += `   req.body.author = req.userId;`+breakLine;
+        }
         controller[`${controllerName}Controller.js`] += `   const {${fieldAll}} = await ${controllerName}.create(req.body);`+breakLine;
         controller[`${controllerName}Controller.js`] += `   return res.json({${fieldAll}});`+breakLine;
         controller[`${controllerName}Controller.js`] += ` }`+breakLine;
         //STORE
         //UPDATE
-        controller[`${controllerName}Controller.js`] += ` async update(req,res){`+breakLine;
+        controller[`${controllerName}Controller.js`] += `  async update(req,res){`+breakLine;
+        if(relation!=false){
+          controller[`${controllerName}Controller.js`] += `   req.${relation}Id = req.params.parent;`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   if(!(req.${relation}Id)){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     return res.status(401).json({error:'${this.crud[relation]['details']['titleSingular']} not found.'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+
+          controller[`${controllerName}Controller.js`] += `   const ${relation}IdExists = await ${relationName}.count({where:{id:req.${relation}Id}});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   if(${relation}IdExists==0){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     return res.status(401).json({error:'${this.crud[relation]['details']['titleSingular']} not found.'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+
+          controller[`${controllerName}Controller.js`] += `   const ${relation} = await ${relationName}.findByPk(req.${relation}Id);`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   const user = await User.findByPk(req.userId);`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   if(${relation}.author!=user.id){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     if(user.role=='Administrador'||user.role=='Gerente'){}else{`+breakLine;
+          controller[`${controllerName}Controller.js`] += `       return res.status(401).json({error:'User not allowed'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     }`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+        }
         controller[`${controllerName}Controller.js`] += `   const schema = Yup.object().shape({`+breakLine;
         for (let field in fields) {
           if(field=='password_hash'){
@@ -350,8 +404,33 @@ class CRUD {
             uniqueAll += 'oldPassword';
           }
         }
-        controller[`${controllerName}Controller.js`] += `   const {${uniqueAll}} = req.body;`+breakLine;
+        if(type!='user') {
+          controller[`${controllerName}Controller.js`] += `   req.${this.crud[type]['details']['slugSingular']}Id = req.params.id;`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   if(!(req.${this.crud[type]['details']['slugSingular']}Id)){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     return res.status(401).json({error:'${this.crud[type]['details']['titleSingular']} not found.'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   const ${this.crud[type]['details']['slugSingular']}IdExists = await ${controllerName}.count({where:{id:req.${this.crud[type]['details']['slugSingular']}Id}});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   if(${this.crud[type]['details']['slugSingular']}IdExists==0){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     return res.status(401).json({error:'${this.crud[type]['details']['titleSingular']} not found.'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+        }
         controller[`${controllerName}Controller.js`] += `   const ${this.crud[type]['details']['slugSingular']} = await ${controllerName}.findByPk(req.${this.crud[type]['details']['slugSingular']}Id);`+breakLine;
+        if(relation!=false){
+          controller[`${controllerName}Controller.js`] += `   if(${relation}.id!=${this.crud[type]['details']['slugSingular']}.${relation}){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     return res.status(401).json({error:'${this.crud[relation]['details']['titleSingular']} does not match'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+        }
+        if(type!='user') {
+          if(relation==false){
+            controller[`${controllerName}Controller.js`] += `   const user = await User.findByPk(req.userId);`+breakLine;
+          }
+          controller[`${controllerName}Controller.js`] += `   if(user.id!=${this.crud[type]['details']['slugSingular']}.author){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     if(user.role=='Administrador'||user.role=='Gerente'){}else{`+breakLine;
+          controller[`${controllerName}Controller.js`] += `       return res.status(401).json({error:'User not allowed'});`+breakLine;
+          controller[`${controllerName}Controller.js`] += `     }`+breakLine;
+          controller[`${controllerName}Controller.js`] += `   }`+breakLine;
+        }
+        controller[`${controllerName}Controller.js`] += `   const {${uniqueAll}} = req.body;`+breakLine;
         for (let field in fields) {
           if(fields[field]['unique']==true){
             controller[`${controllerName}Controller.js`] += `   if(${field}!==${this.crud[type]['details']['slugSingular']}.${field}){`+breakLine;
@@ -367,7 +446,18 @@ class CRUD {
             controller[`${controllerName}Controller.js`] += `   }`+breakLine;
           }
         }
-        controller[`${controllerName}Controller.js`] += `   const {${fieldAll}} = await ${this.crud[type]['details']['slugSingular']}.update(req.body);`+breakLine;
+        var fieldAllNoUnique = '';
+        for (let field in fields) {
+          if(field!='password_hash'&&fields[field]['unique']!=true){
+            if(!fieldAllNoUnique==''){
+              fieldAllNoUnique += ',';
+            } else {
+              fieldAllNoUnique += 'id,';
+            }
+            fieldAllNoUnique += field;
+          }
+        }
+        controller[`${controllerName}Controller.js`] += `   const {${fieldAllNoUnique}} = await ${this.crud[type]['details']['slugSingular']}.update(req.body);`+breakLine;
         controller[`${controllerName}Controller.js`] += `   return res.json({${fieldAll}});`+breakLine;
         controller[`${controllerName}Controller.js`] += ` }`+breakLine;
         //UPDATE
@@ -375,14 +465,82 @@ class CRUD {
         controller[`${controllerName}Controller.js`] += ``+breakLine;
         controller[`${controllerName}Controller.js`] += `export default new ${controllerName}Controller;`+breakLine;
       }
+      if(types['user']){
+        controller[`SessionController.js`] = `import jwt from 'jsonwebtoken';`+breakLine;
+        controller[`SessionController.js`] += `import * as Yup from 'yup';`+breakLine;
+        controller[`SessionController.js`] += `import User from '../models/User';`+breakLine;
+        controller[`SessionController.js`] += `import authConfig from '../../config/auth';`+breakLine;
+        controller[`SessionController.js`] += ``+breakLine;
+        controller[`SessionController.js`] += `class SessionController {`+breakLine;
+        controller[`SessionController.js`] += `  async store(req,res){`+breakLine;
+        controller[`SessionController.js`] += `    const schema = Yup.object().shape({`+breakLine;
+        controller[`SessionController.js`] += `      email: Yup.string().email().required(),`+breakLine;
+        controller[`SessionController.js`] += `      password: Yup.string().required(),`+breakLine;
+        controller[`SessionController.js`] += `    });`+breakLine;
+        controller[`SessionController.js`] += `    if(!(await schema.isValid(req.body))){`+breakLine;
+        controller[`SessionController.js`] += `      return res.status(400).json({error:'Validation Fails'});`+breakLine;
+        controller[`SessionController.js`] += `    }`+breakLine;
+        controller[`SessionController.js`] += `    const {email,password} = req.body;`+breakLine;
+        controller[`SessionController.js`] += `    const user = await User.findOne({where:{email}});`+breakLine;
+        controller[`SessionController.js`] += `    if(!user){`+breakLine;
+        controller[`SessionController.js`] += `      return res.status(401).json({error:'User not found'});`+breakLine;
+        controller[`SessionController.js`] += `    }`+breakLine;
+        controller[`SessionController.js`] += `    if(!(await user.checkPassword(password))){`+breakLine;
+        controller[`SessionController.js`] += `      return res.status(401).json({error:'Password does not match'});`+breakLine;
+        controller[`SessionController.js`] += `    }`+breakLine;
+        controller[`SessionController.js`] += `    const {id,name} = user;`+breakLine;
+        controller[`SessionController.js`] += `    return res.json({`+breakLine;
+        controller[`SessionController.js`] += `      user: {`+breakLine;
+        controller[`SessionController.js`] += `        id,`+breakLine;
+        controller[`SessionController.js`] += `        name,`+breakLine;
+        controller[`SessionController.js`] += `        email,`+breakLine;
+        controller[`SessionController.js`] += `      },`+breakLine;
+        controller[`SessionController.js`] += `      token: jwt.sign({id},authConfig.secret,{`+breakLine;
+        controller[`SessionController.js`] += `        expiresIn: authConfig.expiresIn,`+breakLine;
+        controller[`SessionController.js`] += `      }),`+breakLine;
+        controller[`SessionController.js`] += `    });`+breakLine;
+        controller[`SessionController.js`] += `  }`+breakLine;
+        controller[`SessionController.js`] += `}`+breakLine;
+        controller[`SessionController.js`] += ``+breakLine;
+        controller[`SessionController.js`] += `export default new SessionController();`+breakLine;
+
+        controller[`auth.js`] = `import jwt from 'jsonwebtoken';`+breakLine;
+        controller[`auth.js`] += `import {promisify} from 'util';`+breakLine;
+        controller[`auth.js`] += `import authConfig from '../../config/auth';`+breakLine;
+        controller[`auth.js`] += ``+breakLine;
+        controller[`auth.js`] += `export default async (req,res,next)=>{`+breakLine;
+        controller[`auth.js`] += `  const authHeader = req.headers.authorization;`+breakLine;
+        controller[`auth.js`] += `  if(!authHeader){`+breakLine;
+        controller[`auth.js`] += `    return res.status(401).json({error: 'Token not provided'});`+breakLine;
+        controller[`auth.js`] += `  }`+breakLine;
+        controller[`auth.js`] += `  const [, token] = authHeader.split(' ');`+breakLine;
+        controller[`auth.js`] += `  try {`+breakLine;
+        controller[`auth.js`] += `    const decoded = await promisify(jwt.verify)(token,authConfig.secret);`+breakLine;
+        controller[`auth.js`] += `    req.userId = decoded.id;`+breakLine;
+        controller[`auth.js`] += `    return next();`+breakLine;
+        controller[`auth.js`] += `  } catch(err) {`+breakLine;
+        controller[`auth.js`] += `    return res.status(401).json({error: 'Token invalid'});`+breakLine;
+        controller[`auth.js`] += `  }`+breakLine;
+        controller[`auth.js`] += `};`+breakLine;
+      }
       for (let file in controller) {
-        var path = "./src/app";
-        CreateFile.GenerateDir(path);
-        path += "/controllers";
-        CreateFile.GenerateDir(path);
-        path += '/'+file;
-        var message = controller[file];
-        CreateFile.GenerateFile(path,message);
+        if(file=='auth.js'){
+          var path = "./src/app";
+          CreateFile.GenerateDir(path);
+          path += "/middlewares";
+          CreateFile.GenerateDir(path);
+          path += '/'+file;
+          var message = controller[file];
+          CreateFile.GenerateFile(path,message);
+        } else {
+          var path = "./src/app";
+          CreateFile.GenerateDir(path);
+          path += "/controllers";
+          CreateFile.GenerateDir(path);
+          path += '/'+file;
+          var message = controller[file];
+          CreateFile.GenerateFile(path,message);
+        }
       }
       return controller;
     }

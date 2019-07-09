@@ -2,7 +2,7 @@ import * as Yup from 'yup';
 import User from '../models/User';
 
 class UserController {
- async store(req,res){
+  async store(req,res){
    const schema = Yup.object().shape({
      name: Yup.string().required(),
      email: Yup.string().email().required(),
@@ -19,7 +19,7 @@ class UserController {
    const {id,name,email,role} = await User.create(req.body);
    return res.json({id,name,email,role});
  }
- async update(req,res){
+  async update(req,res){
    const schema = Yup.object().shape({
      name: Yup.string(),
      email: Yup.string().email(),
@@ -31,8 +31,8 @@ class UserController {
    if(!(await schema.isValid(req.body))){
      return res.status(400).json({error:'Validation Fails'});
    }
-   const {email,oldPassword} = req.body;
    const user = await User.findByPk(req.userId);
+   const {email,oldPassword} = req.body;
    if(email!==user.email){
      const emailExists = await User.findOne({ where: { email } });
      if(emailExists){
@@ -42,7 +42,7 @@ class UserController {
    if(oldPassword && !(await user.checkPassword(oldPassword))){
      return res.status(401).send({ error: 'Password does not match' });
    }
-   const {id,name,email,role} = await user.update(req.body);
+   const {id,name,role} = await user.update(req.body);
    return res.json({id,name,email,role});
  }
 }

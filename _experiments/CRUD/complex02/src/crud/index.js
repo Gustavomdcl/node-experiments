@@ -8,7 +8,7 @@ CRUD
     .Field('name','text',true,'Nome','Preencha seu nome',false)
     .Field('email','email',true,'Email','Digite o seu email',false,true)
     .Field('password_hash','password',true,'Senha','Informe sua senha',false)
-    .Field('role','checkbox',true,'Perfil','Escolha um perfil',['Administrador','Gerente','Simples','Premium'])
+    .Field('role','radio',true,'Perfil','Escolha um perfil',['Administrador','Gerente','Simples','Premium'])
   //Projetos
     .CustomPostType('project')
     .Details('project','projects','Projeto','Projetos','o')
