@@ -65,6 +65,26 @@ class CRUD {
       config['database.js'] += `    underscoredAll: true,`+breakLine;
       config['database.js'] += `  },`+breakLine;
       config['database.js'] += `};`+breakLine;
+
+      config['multer.js'] = '';
+      config['multer.js'] += `import multer from 'multer';`+breakLine;
+      config['multer.js'] += `import crypto from 'crypto';`+breakLine;
+      config['multer.js'] += `import { extname, resolve } from 'path';`+breakLine;
+      config['multer.js'] += ``+breakLine;
+      config['multer.js'] += `export default {`+breakLine;
+      config['multer.js'] += `  storage: multer.diskStorage({`+breakLine;
+      config['multer.js'] += `    destination: resolve(__dirname, '..', '..', 'tmp', 'uploads'),`+breakLine;
+      config['multer.js'] += `    filename: (req, file, cb) => {`+breakLine;
+      config['multer.js'] += `      crypto.randomBytes(16, (err, res) => {`+breakLine;
+      config['multer.js'] += `        if (err) return cb(err);`+breakLine;
+      config['multer.js'] += `        `+breakLine;
+      config['multer.js'] += `        return cb(null, res.toString('hex') + extname(file.originalname));`+breakLine;
+      config['multer.js'] += `      });`+breakLine;
+      config['multer.js'] += `    },`+breakLine;
+      config['multer.js'] += `  }),`+breakLine;
+      config['multer.js'] += `};`+breakLine;
+      CreateFile.GenerateDir('./tmp');
+      CreateFile.GenerateDir('./tmp/uploads');
       for (let file in config) {
         var path = "./src";
         CreateFile.GenerateDir(path);
@@ -106,7 +126,7 @@ class CRUD {
       server['server.js'] += `App.listen(3333);`+breakLine;
 
       const types = this.crud;
-      var controllers = '';
+      var controllers = `import FileController from './app/controllers/FileController';`+breakLine;
       var routes = '';
       for (let type in types) {
         var typeName = this.crud[type]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[type]['details']['slugSingular'].slice(1);
@@ -135,11 +155,17 @@ class CRUD {
       }
       server['routes.js'] = '';
       server['routes.js'] += `import { Router } from 'express';`+breakLine;
+      server['routes.js'] += `import multer from 'multer';`+breakLine;
+      server['routes.js'] += `import multerConfig from './config/multer';`+breakLine;
+      server['routes.js'] += ``+breakLine;
       server['routes.js'] += controllers;
       server['routes.js'] += ``+breakLine;
       server['routes.js'] += `const routes = new Router();`+breakLine;
+      server['routes.js'] += `const upload = multer(multerConfig);`+breakLine;
       server['routes.js'] += ``+breakLine;
       server['routes.js'] += routes;
+      server['routes.js'] += `routes.post('/files', upload.single('file'), FileController.store);`+breakLine;
+      server['routes.js'] += ``+breakLine;
       server['routes.js'] += `export default routes;`+breakLine;
       for (let file in server) {
         var path = "./src";
@@ -153,8 +179,42 @@ class CRUD {
     Migration() {
       var migration = {};
       var breakLine = "\n";
-      var migrationCount = 9;
+      var migrationCount = 10;
       var migrationName = '';
+      migrationName = `201811031030${migrationCount}-create-files.js`;
+      migration[migrationName] = `module.exports = {`+breakLine;
+      migration[migrationName] += `  up: (queryInterface, Sequelize) => {`+breakLine;
+      migration[migrationName] += `    return queryInterface.createTable('files', {`+breakLine;
+      migration[migrationName] += `      id: {`+breakLine;
+      migration[migrationName] += `        type: Sequelize.INTEGER,`+breakLine;
+      migration[migrationName] += `        allowNull: false,`+breakLine;
+      migration[migrationName] += `        autoIncrement: true,`+breakLine;
+      migration[migrationName] += `        primaryKey: true,`+breakLine;
+      migration[migrationName] += `      },`+breakLine;
+      migration[migrationName] += `      name: {`+breakLine;
+      migration[migrationName] += `        type: Sequelize.STRING,`+breakLine;
+      migration[migrationName] += `        allowNull: false,`+breakLine;
+      migration[migrationName] += `      },`+breakLine;
+      migration[migrationName] += `      path: {`+breakLine;
+      migration[migrationName] += `        type: Sequelize.STRING,`+breakLine;
+      migration[migrationName] += `        allowNull: false,`+breakLine;
+      migration[migrationName] += `        unique: true,`+breakLine;
+      migration[migrationName] += `      },`+breakLine;
+      migration[migrationName] += `      created_at: {`+breakLine;
+      migration[migrationName] += `        type: Sequelize.DATE,`+breakLine;
+      migration[migrationName] += `        allowNull: false,`+breakLine;
+      migration[migrationName] += `      },`+breakLine;
+      migration[migrationName] += `      updated_at: {`+breakLine;
+      migration[migrationName] += `        type: Sequelize.DATE,`+breakLine;
+      migration[migrationName] += `        allowNull: false,`+breakLine;
+      migration[migrationName] += `      },`+breakLine;
+      migration[migrationName] += `    });`+breakLine;
+      migration[migrationName] += `  },`+breakLine;
+      migration[migrationName] += `  down: queryInterface => {`+breakLine;
+      migration[migrationName] += `    return queryInterface.dropTable('files');`+breakLine;
+      migration[migrationName] += `  },`+breakLine;
+      migration[migrationName] += `};`+breakLine;
+      migrationCount++;
       const types = this.crud;
       for (let type in types) {
         migrationCount++;
@@ -173,6 +233,12 @@ class CRUD {
         if(type!='user'){//usuários não recebem author
           migration[migrationName] += '      author: {'+breakLine;
           migration[migrationName] += '        type: Sequelize.INTEGER,'+breakLine;//Linka com o id do author
+          migration[migrationName] += '        references: {'+breakLine;
+          migration[migrationName] += `          model: '${this.crud['user']['details']['slugPlural']}',`+breakLine;
+          migration[migrationName] += `          key: 'id',`+breakLine;
+          migration[migrationName] += '        },'+breakLine;
+          migration[migrationName] += `        onUpdate: 'CASCADE',`+breakLine;
+          migration[migrationName] += `        onDelete: 'SET NULL',`+breakLine;
           migration[migrationName] += '        allowNull: false,'+breakLine;
           migration[migrationName] += '      },'+breakLine;
         }
@@ -180,6 +246,12 @@ class CRUD {
         if(types[type]['relation']!=false){
           migration[migrationName] += `      ${types[type]['relation']}: {`+breakLine;
           migration[migrationName] += '        type: Sequelize.INTEGER,'+breakLine;//Linka com o elemento pai
+          migration[migrationName] += '        references: {'+breakLine;
+          migration[migrationName] += `          model: '${this.crud[types[type]['relation']]['details']['slugPlural']}',`+breakLine;
+          migration[migrationName] += `          key: 'id',`+breakLine;
+          migration[migrationName] += '        },'+breakLine;
+          migration[migrationName] += `        onUpdate: 'CASCADE',`+breakLine;
+          migration[migrationName] += `        onDelete: 'SET NULL',`+breakLine;
           migration[migrationName] += '        allowNull: false,'+breakLine;
           migration[migrationName] += '      },'+breakLine;
         }
@@ -188,7 +260,15 @@ class CRUD {
         for (let field in fields) {
           //migration[field] = fields[field];
           migration[migrationName] += `      ${field}: {`+breakLine;
-          if(fields[field]['format']=='different'){} else {
+          if(fields[field]['format']=='file'){
+            migration[migrationName] += '        type: Sequelize.INTEGER,'+breakLine;
+            migration[migrationName] += '        references: {'+breakLine;
+            migration[migrationName] += `          model: 'files',`+breakLine;
+            migration[migrationName] += `          key: 'id',`+breakLine;
+            migration[migrationName] += '        },'+breakLine;
+            migration[migrationName] += `        onUpdate: 'CASCADE',`+breakLine;
+            migration[migrationName] += `        onDelete: 'SET NULL',`+breakLine;
+          } else if(fields[field]['format']=='different'){} else {
             migration[migrationName] += '        type: Sequelize.STRING,'+breakLine;
           }
           if(fields[field]['required']==true){
@@ -235,9 +315,30 @@ class CRUD {
       var model = {};
       var breakLine = "\n";
       const types = this.crud;
-      var models = '[';
+      var models = '[File,';
       var imports = '';
       var model_count = 0;
+
+      model[`File.js`] = '';
+      model[`File.js`] += `import Sequelize, { Model } from 'sequelize';`+breakLine;
+      model[`File.js`] += ``+breakLine;
+      model[`File.js`] += `class File extends Model {`+breakLine;
+      model[`File.js`] += `  static init(sequelize) {`+breakLine;
+      model[`File.js`] += `    super.init(`+breakLine;
+      model[`File.js`] += `      {`+breakLine;
+      model[`File.js`] += `        name: Sequelize.STRING,`+breakLine;
+      model[`File.js`] += `        path: Sequelize.STRING,`+breakLine;
+      model[`File.js`] += `      },`+breakLine;
+      model[`File.js`] += `      {`+breakLine;
+      model[`File.js`] += `        sequelize,`+breakLine;
+      model[`File.js`] += `      }`+breakLine;
+      model[`File.js`] += `    );`+breakLine;
+      model[`File.js`] += `    return this;`+breakLine;
+      model[`File.js`] += `  }`+breakLine;
+      model[`File.js`] += `}`+breakLine;
+      model[`File.js`] += ``+breakLine;
+      model[`File.js`] += `export default File;`+breakLine;
+
       for (let type in types) {
         var modelName = this.crud[type]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[type]['details']['slugSingular'].slice(1);
         imports += `import ${modelName} from '../app/models/${modelName}';`+breakLine;
@@ -259,17 +360,19 @@ class CRUD {
         model[`${modelName}.js`] += '      {'+breakLine;
         const fields = types[type]['body'];
         for (let field in fields) {
-          if(type!='user'){//usuários não recebem author
-            model[`${modelName}.js`] += '        author: Sequelize.INTEGER,'+breakLine;
-          }
-          if(types[type]['relation']!=false){
-            model[`${modelName}.js`] += `        ${types[type]['relation']}: Sequelize.INTEGER,`+breakLine;
-          }
-          if(field=='password_hash'&&type=='user'){
-            model[`${modelName}.js`] += '        password: Sequelize.VIRTUAL,'+breakLine;
-          }
-          if(fields[field]['format']=='different'){} else {
-            model[`${modelName}.js`] += `        ${field}: Sequelize.STRING,`+breakLine;
+          if(fields[field]['format']=='file'){} else {
+            // if(type!='user'){//usuários não recebem author
+            //   model[`${modelName}.js`] += '        author: Sequelize.INTEGER,'+breakLine;
+            // }
+            // if(types[type]['relation']!=false){
+            //   model[`${modelName}.js`] += `        ${types[type]['relation']}: Sequelize.INTEGER,`+breakLine;
+            // }
+            if(field=='password_hash'&&type=='user'){
+              model[`${modelName}.js`] += '        password: Sequelize.VIRTUAL,'+breakLine;
+            }
+            if(fields[field]['format']=='different'){} else {
+              model[`${modelName}.js`] += `        ${field}: Sequelize.STRING,`+breakLine;
+            }
           }
         }
         model[`${modelName}.js`] += '      },'+breakLine;
@@ -286,6 +389,20 @@ class CRUD {
         }
         model[`${modelName}.js`] += '    return this;'+breakLine;
         model[`${modelName}.js`] += '  }'+breakLine;
+        model[`${modelName}.js`] += `  static associate(models) {`+breakLine;
+        if(type!='user'){
+          model[`${modelName}.js`] += `    this.belongsTo(models.User, { foreignKey: 'author' });`+breakLine;
+        }
+        if(types[type]['relation']!=false){
+          var relationName = this.crud[types[type]['relation']]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[types[type]['relation']]['details']['slugSingular'].slice(1);
+          model[`${modelName}.js`] += `    this.belongsTo(models.${relationName}, { foreignKey: '${types[type]['relation']}' });`+breakLine;
+        }
+        for (let field in fields) {
+          if(fields[field]['format']=='file'){
+            model[`${modelName}.js`] += `    this.belongsTo(models.File, { foreignKey: '${field}' });`+breakLine;
+          }
+        }
+        model[`${modelName}.js`] += `  }`+breakLine;
         if(type=='user'){
           model[`${modelName}.js`] += '  checkPassword(password) {'+breakLine;
           model[`${modelName}.js`] += '    return bcrypt.compare(password, this.password_hash);'+breakLine;
@@ -299,7 +416,10 @@ class CRUD {
       models += ']';
       model['index.js'] = '';
       model['index.js'] += `import Sequelize from 'sequelize';`+breakLine;
+      model['index.js'] += ``+breakLine;
+      model['index.js'] += `import File from '../app/models/File';`+breakLine;
       model['index.js'] += imports;
+      model['index.js'] += ``+breakLine;
       model['index.js'] += `import databaseConfig from '../config/database';`+breakLine;
       model['index.js'] += ''+breakLine;
       model['index.js'] += `const models = ${models};`+breakLine;
@@ -310,7 +430,9 @@ class CRUD {
       model['index.js'] += '  }'+breakLine;
       model['index.js'] += '  init(){'+breakLine;
       model['index.js'] += '    this.connection = new Sequelize(databaseConfig);'+breakLine;
-      model['index.js'] += '    models.map(model => model.init(this.connection));'+breakLine;
+      model['index.js'] += '    models'+breakLine;
+      model['index.js'] += '      .map(model => model.init(this.connection))'+breakLine;
+      model['index.js'] += '      .map(model => model.associate && model.associate(this.connection.models));'+breakLine;
       model['index.js'] += '  }'+breakLine;
       model['index.js'] += '}'+breakLine;
       model['index.js'] += ''+breakLine;
@@ -341,6 +463,23 @@ class CRUD {
     Controllers() {
       var controller = {};
       var breakLine = "\n";
+      controller[`FileController.js`] = '';
+      controller[`FileController.js`] += `import File from '../models/File';`+breakLine;
+      controller[`FileController.js`] += ``+breakLine;
+      controller[`FileController.js`] += `class FileController {`+breakLine;
+      controller[`FileController.js`] += `  async store(req, res) {`+breakLine;
+      controller[`FileController.js`] += `    const { originalname: name, filename: path } = req.file;`+breakLine;
+      controller[`FileController.js`] += `    `+breakLine;
+      controller[`FileController.js`] += `    const file = await File.create({`+breakLine;
+      controller[`FileController.js`] += `      name,`+breakLine;
+      controller[`FileController.js`] += `      path,`+breakLine;
+      controller[`FileController.js`] += `    });`+breakLine;
+      controller[`FileController.js`] += `    `+breakLine;
+      controller[`FileController.js`] += `    return res.json(file);`+breakLine;
+      controller[`FileController.js`] += `  }`+breakLine;
+      controller[`FileController.js`] += `}`+breakLine;
+      controller[`FileController.js`] += ``+breakLine;
+      controller[`FileController.js`] += `export default new FileController();`+breakLine;
       const types = this.crud;
       for (let type in types) {
         var controllerName = this.crud[type]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[type]['details']['slugSingular'].slice(1);

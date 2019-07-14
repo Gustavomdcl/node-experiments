@@ -1,10 +1,13 @@
 import Sequelize from 'sequelize';
+
+import File from '../app/models/File';
 import User from '../app/models/User';
 import Project from '../app/models/Project';
 import Task from '../app/models/Task';
+
 import databaseConfig from '../config/database';
 
-const models = [User,Project,Task];
+const models = [File,User,Project,Task];
 
 class Database {
   constructor(){
@@ -12,7 +15,9 @@ class Database {
   }
   init(){
     this.connection = new Sequelize(databaseConfig);
-    models.map(model => model.init(this.connection));
+    models
+      .map(model => model.init(this.connection))
+      .map(model => model.associate && model.associate(this.connection.models));
   }
 }
 

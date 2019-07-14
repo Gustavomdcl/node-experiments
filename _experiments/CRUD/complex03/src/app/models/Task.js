@@ -4,14 +4,8 @@ class Task extends Model {
   static init(sequelize){
     super.init(
       {
-        author: Sequelize.INTEGER,
-        project: Sequelize.INTEGER,
         title: Sequelize.STRING,
-        author: Sequelize.INTEGER,
-        project: Sequelize.INTEGER,
         description: Sequelize.STRING,
-        author: Sequelize.INTEGER,
-        project: Sequelize.INTEGER,
         email: Sequelize.STRING,
       },
       {
@@ -19,6 +13,10 @@ class Task extends Model {
       }
     );
     return this;
+  }
+  static associate(models) {
+    this.belongsTo(models.User, { foreignKey: 'author' });
+    this.belongsTo(models.Project, { foreignKey: 'project' });
   }
 }
 

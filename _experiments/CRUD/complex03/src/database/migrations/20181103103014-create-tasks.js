@@ -9,10 +9,22 @@ module.exports = {
       },
       author: {
         type: Sequelize.INTEGER,
+        references: {
+          model: 'users',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
         allowNull: false,
       },
       project: {
         type: Sequelize.INTEGER,
+        references: {
+          model: 'projects',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
         allowNull: false,
       },
       title: {
