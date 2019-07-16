@@ -101,7 +101,9 @@ class CRUD {
       var breakLine = "\n";
       server['app.js'] = '';
       server['app.js'] += `import express from 'express';`+breakLine;
+      server['app.js'] += `import path from 'path';`+breakLine;
       server['app.js'] += `import routes from './routes';`+breakLine;
+      server['app.js'] += ``+breakLine;
       server['app.js'] += `import './database';`+breakLine;
       server['app.js'] += ``+breakLine;
       server['app.js'] += `class App {`+breakLine;
@@ -112,6 +114,7 @@ class CRUD {
       server['app.js'] += `  }`+breakLine;
       server['app.js'] += `  middlewares() {`+breakLine;
       server['app.js'] += `    this.server.use(express.json());`+breakLine;
+      server['app.js'] += `    this.server.use('/files',express.static(path.resolve(__dirname,'..','tmp','uploads')));`+breakLine;
       server['app.js'] += `  }`+breakLine;
       server['app.js'] += `  routes() {`+breakLine;
       server['app.js'] += `    this.server.use(routes);`+breakLine;
@@ -142,13 +145,17 @@ class CRUD {
             routes += `routes.post('/sessions', SessionController.store);`+breakLine;
             routes += `routes.use(authMiddleware);`+breakLine;
             routes += `routes.put('/${this.crud[type]['details']['slugPlural']}', ${typeName}Controller.update);`+breakLine;
+            routes += `routes.get('/${this.crud[type]['details']['slugPlural']}', ${typeName}Controller.index);`+breakLine;
           } else {
             if(types[type]['relation']==false){
               routes += `routes.post('/${this.crud[type]['details']['slugPlural']}', ${typeName}Controller.store);`+breakLine;
               routes += `routes.put('/${this.crud[type]['details']['slugPlural']}/:id', ${typeName}Controller.update);`+breakLine;
+              routes += `routes.get('/${this.crud[type]['details']['slugPlural']}', ${typeName}Controller.index);`+breakLine;
             } else {
               routes += `routes.post('/${types[type]['relation']}/:parent/${this.crud[type]['details']['slugPlural']}', ${typeName}Controller.store);`+breakLine;
               routes += `routes.put('/${types[type]['relation']}/:parent/${this.crud[type]['details']['slugPlural']}/:id', ${typeName}Controller.update);`+breakLine;
+              routes += `routes.get('/${this.crud[type]['details']['slugPlural']}', ${typeName}Controller.index);`+breakLine;
+              routes += `routes.get('/${types[type]['relation']}/:parent/${this.crud[type]['details']['slugPlural']}', ${typeName}Controller.index);`+breakLine;
             }
           }
           routes += ``+breakLine;
@@ -328,6 +335,12 @@ class CRUD {
       model[`File.js`] += `      {`+breakLine;
       model[`File.js`] += `        name: Sequelize.STRING,`+breakLine;
       model[`File.js`] += `        path: Sequelize.STRING,`+breakLine;
+      model[`File.js`] += `        url: {`+breakLine;
+      model[`File.js`] += `          type: Sequelize.VIRTUAL,`+breakLine;
+      model[`File.js`] += `          get(){`+breakLine;
+      model[`File.js`] += `            return 'http://localhost:3333/files/'+this.path;`+breakLine;
+      model[`File.js`] += `          }`+breakLine;
+      model[`File.js`] += `        }`+breakLine;
       model[`File.js`] += `      },`+breakLine;
       model[`File.js`] += `      {`+breakLine;
       model[`File.js`] += `        sequelize,`+breakLine;
@@ -391,15 +404,15 @@ class CRUD {
         model[`${modelName}.js`] += '  }'+breakLine;
         model[`${modelName}.js`] += `  static associate(models) {`+breakLine;
         if(type!='user'){
-          model[`${modelName}.js`] += `    this.belongsTo(models.User, { foreignKey: 'author' });`+breakLine;
+          model[`${modelName}.js`] += `    this.belongsTo(models.User, { foreignKey: 'author', as: 'author_data' });`+breakLine;
         }
         if(types[type]['relation']!=false){
           var relationName = this.crud[types[type]['relation']]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[types[type]['relation']]['details']['slugSingular'].slice(1);
-          model[`${modelName}.js`] += `    this.belongsTo(models.${relationName}, { foreignKey: '${types[type]['relation']}' });`+breakLine;
+          model[`${modelName}.js`] += `    this.belongsTo(models.${relationName}, { foreignKey: '${types[type]['relation']}', as: '${types[type]['relation']}_data' });`+breakLine;
         }
         for (let field in fields) {
           if(fields[field]['format']=='file'){
-            model[`${modelName}.js`] += `    this.belongsTo(models.File, { foreignKey: '${field}' });`+breakLine;
+            model[`${modelName}.js`] += `    this.belongsTo(models.File, { foreignKey: '${field}', as: '${field}_data' });`+breakLine;
           }
         }
         model[`${modelName}.js`] += `  }`+breakLine;
@@ -482,6 +495,7 @@ class CRUD {
       controller[`FileController.js`] += `export default new FileController();`+breakLine;
       const types = this.crud;
       for (let type in types) {
+        const fields = types[type]['body'];
         var controllerName = this.crud[type]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[type]['details']['slugSingular'].slice(1);
         controller[`${controllerName}Controller.js`] = '';
         controller[`${controllerName}Controller.js`] += `import * as Yup from 'yup';`+breakLine;
@@ -489,14 +503,123 @@ class CRUD {
         if(type!='user') {
           controller[`${controllerName}Controller.js`] += `import User from '../models/User';`+breakLine;
         }
+        controller[`${controllerName}Controller.js`] += `import File from '../models/File';`+breakLine;
         var relation = types[type]['relation'];
         var relationName;
         if(relation!=false){
           relationName = this.crud[relation]['details']['slugSingular'].charAt(0).toUpperCase() + this.crud[relation]['details']['slugSingular'].slice(1);
           controller[`${controllerName}Controller.js`] += `import ${relationName} from '../models/${relationName}';`+breakLine;
         }
+        //INCLUDES
+        var includeHead = '      include: ['+breakLine;
+        var includeFoot = '      ],'+breakLine;
+        var includes = includeHead;
+        if(relation!=false){
+          var relationAttributes = ``;
+          var relationIncludes = '    '+includeHead;
+          for (let field in types[relation]['body']) {
+            if(field!='password_hash'){
+              if(!relationAttributes==``){
+                relationAttributes += `,`;
+              } else {
+                relationAttributes += `'id',`;
+                if(relation!='user') {
+                  fieldAttributes += `'author',`;
+                }
+              }
+              relationAttributes += `'${field}'`;
+            }
+            if(types[relation]['body'][field]['format']=='file'){
+              relationIncludes += `            {`+breakLine;
+              relationIncludes += `              model: File,`+breakLine;
+              relationIncludes += `              as: '${field}_data',`+breakLine;
+              relationIncludes += `              attributes: ['name', 'path', 'url'],`+breakLine;
+              relationIncludes += `            },`+breakLine;
+            }
+          }
+          relationIncludes += '    '+includeFoot;
+          includes += `        {`+breakLine;
+          includes += `          model: ${relationName},`+breakLine;
+          includes += `          as: '${relation}_data',`+breakLine;
+          includes += `          attributes: [${relationAttributes}],`+breakLine;
+          includes += relationIncludes;
+          includes += `        },`+breakLine;
+        }
+        if(type!='user') {
+          var userAttributes = ``;
+          var userIncludes = '    '+includeHead;
+          for (let field in types['user']['body']) {
+            if(field!='password_hash'){
+              if(!userAttributes==``){
+                userAttributes += `,`;
+              } else {
+                userAttributes += `'id',`;
+              }
+              userAttributes += `'${field}'`;
+            }
+            if(types['user']['body'][field]['format']=='file'){
+              userIncludes += `            {`+breakLine;
+              userIncludes += `              model: File,`+breakLine;
+              userIncludes += `              as: '${field}_data',`+breakLine;
+              userIncludes += `              attributes: ['name', 'path', 'url'],`+breakLine;
+              userIncludes += `            },`+breakLine;
+            }
+          }
+          userIncludes += '    '+includeFoot;
+          includes += `        {`+breakLine;
+          includes += `          model: User,`+breakLine;
+          includes += `          as: 'author_data',`+breakLine;
+          includes += `          attributes: [${userAttributes}],`+breakLine;
+          includes += userIncludes;
+          includes += `        },`+breakLine;
+        }
+        for (let field in fields) {
+          if(fields[field]['format']=='file'){
+            includes += `        {`+breakLine;
+            includes += `          model: File,`+breakLine;
+            includes += `          as: '${field}_data',`+breakLine;
+            includes += `          attributes: ['name', 'path', 'url'],`+breakLine;
+            includes += `        },`+breakLine;
+          }
+        }
+        includes += includeFoot;
+        //INCLUDES
         controller[`${controllerName}Controller.js`] += ``+breakLine;
         controller[`${controllerName}Controller.js`] += `class ${controllerName}Controller {`+breakLine;
+        //INDEX
+        controller[`${controllerName}Controller.js`] += `  async index(req,res){`+breakLine;
+        controller[`${controllerName}Controller.js`] += `    var whereData = {};`+breakLine;
+        if(relation!=false){
+          controller[`${controllerName}Controller.js`] += `    if(req.params.parent){`+breakLine;
+          controller[`${controllerName}Controller.js`] += `      whereData.${relation} = req.params.parent;`+breakLine;
+          controller[`${controllerName}Controller.js`] += `    }`+breakLine;
+        }
+        controller[`${controllerName}Controller.js`] += `    const ${this.crud[type]['details']['slugPlural']} = await ${controllerName}.findAll({`+breakLine;
+        var fieldAttributes = ``;
+        for (let field in fields) {
+          if(field!='password_hash'){
+            if(!fieldAttributes==``){
+              fieldAttributes += `,`;
+            } else {
+              fieldAttributes += `'id',`;
+              if(relation!=false){
+                fieldAttributes += `'${relation}',`;
+              }
+              if(type!='user') {
+                fieldAttributes += `'author',`;
+              }
+            }
+            fieldAttributes += `'${field}'`;
+          }
+        }
+        controller[`${controllerName}Controller.js`] += `      where: whereData,`+breakLine;
+        controller[`${controllerName}Controller.js`] += `      attributes: [${fieldAttributes}],`+breakLine;
+        controller[`${controllerName}Controller.js`] += includes;
+        controller[`${controllerName}Controller.js`] += `    });`+breakLine;
+        controller[`${controllerName}Controller.js`] += `    `+breakLine;
+        controller[`${controllerName}Controller.js`] += `    return res.json(${this.crud[type]['details']['slugPlural']});`+breakLine;
+        controller[`${controllerName}Controller.js`] += `  }`+breakLine;
+        //INDEX
         //STORE
         controller[`${controllerName}Controller.js`] += `  async store(req,res){`+breakLine;
         if(relation!=false){
@@ -521,7 +644,6 @@ class CRUD {
           controller[`${controllerName}Controller.js`] += `   req.body.${relation} = ${relation}.id;`+breakLine;
         }
         controller[`${controllerName}Controller.js`] += `   const schema = Yup.object().shape({`+breakLine;
-        const fields = types[type]['body'];
         for (let field in fields) {
           if(field=='password_hash'){
             controller[`${controllerName}Controller.js`] += `     password: Yup.string()`;

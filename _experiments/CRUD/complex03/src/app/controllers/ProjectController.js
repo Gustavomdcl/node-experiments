@@ -1,8 +1,32 @@
 import * as Yup from 'yup';
 import Project from '../models/Project';
 import User from '../models/User';
+import File from '../models/File';
 
 class ProjectController {
+  async index(req,res){
+    var whereData = {};
+    const projects = await Project.findAll({
+      where: whereData,
+      attributes: ['id','author','title','description','email'],
+      include: [
+        {
+          model: User,
+          as: 'author_data',
+          attributes: ['id','avatar','name','email','role'],
+          include: [
+            {
+              model: File,
+              as: 'avatar_data',
+              attributes: ['name', 'path', 'url'],
+            },
+          ],
+        },
+      ],
+    });
+    
+    return res.json(projects);
+  }
   async store(req,res){
    const schema = Yup.object().shape({
      title: Yup.string(),

@@ -15,8 +15,8 @@ class Task extends Model {
     return this;
   }
   static associate(models) {
-    this.belongsTo(models.User, { foreignKey: 'author' });
-    this.belongsTo(models.Project, { foreignKey: 'project' });
+    this.belongsTo(models.User, { foreignKey: 'author', as: 'author_data' });
+    this.belongsTo(models.Project, { foreignKey: 'project', as: 'project_data' });
   }
 }
 

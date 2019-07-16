@@ -1,9 +1,43 @@
 import * as Yup from 'yup';
 import Task from '../models/Task';
 import User from '../models/User';
+import File from '../models/File';
 import Project from '../models/Project';
 
 class TaskController {
+  async index(req,res){
+    var whereData = {};
+    if(req.params.parent){
+      whereData.project = req.params.parent;
+    }
+    const tasks = await Task.findAll({
+      where: whereData,
+      attributes: ['id','project','author','title','description','email'],
+      include: [
+        {
+          model: Project,
+          as: 'project_data',
+          attributes: ['id','title','description','email'],
+          include: [
+          ],
+        },
+        {
+          model: User,
+          as: 'author_data',
+          attributes: ['id','avatar','name','email','role'],
+          include: [
+            {
+              model: File,
+              as: 'avatar_data',
+              attributes: ['name', 'path', 'url'],
+            },
+          ],
+        },
+      ],
+    });
+    
+    return res.json(tasks);
+  }
   async store(req,res){
    req.projectId = req.params.parent;
    if(!(req.projectId)){
